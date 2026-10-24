@@ -10,7 +10,7 @@ st.set_page_config(page_title="US Visa DS-160 Professional Tracker", layout="wid
 DATA_FILE = "ds160_data.csv"
 
 # YOUR CORRECT OFFICIAL US VISA PORTAL URL
-VISA_PORTAL_URL = "https://www.usvisascheduling.com/"
+VISA_PORTAL_URL = "https://usvisascheduling.com"
 
 # Load or initialize data
 def load_data():
@@ -48,7 +48,7 @@ st.write("---")
 
 df = load_data()
 
-# Clean strings for processing
+# Clean strings for processing safely
 for col in df.columns:
     df[col] = df[col].astype(str).replace("nan", "").replace("None", "").str.strip()
 
@@ -215,5 +215,3 @@ if search_query:
 if not display_df.empty:
     st.dataframe(display_df, use_container_width=True)
     
-    try:
-        import io

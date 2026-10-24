@@ -9,6 +9,9 @@ st.set_page_config(page_title="US Visa DS-160 Professional Tracker", layout="wid
 # File path for data storage
 DATA_FILE = "ds160_data.csv"
 
+# US Visa Portal URL
+VISA_PORTAL_URL = "https://usvisascheduling.com"
+
 # Load or initialize data
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -64,7 +67,7 @@ st.write("---")
 # Main Section: Add or Edit Data
 st.subheader("📝 Data Management (Add New or Edit Existing)")
 
-tab1, tab2 = st.tabs(["➕ Add New Applicant", "✏️ Edit / Update Existing Data"])
+tab1, tab2 = st.tabs(["➕ Add New Applicant", "✏️ Edit / Update & Track Appointment"])
 
 # TAB 1: ADD NEW APPLICANT
 with tab1:
@@ -107,38 +110,43 @@ with tab1:
             else:
                 st.error("Please fill all the mandatory (*) fields.")
 
-# TAB 2: EDIT EXISTING APPLICANT
+# TAB 2: EDIT & PORTAL LINK
 with tab2:
     if not df.empty:
         # Create a display label for selectbox (Name + DS160)
         df['select_label'] = df['Applicant Name'] + " (" + df['DS-160 Number'].astype(str) + ")"
-        selected_label = st.selectbox("Select Applicant to Edit:", df['select_label'].tolist())
+        selected_label = st.selectbox("Select Applicant to Edit or Track:", df['select_label'].tolist())
         
         # Get the row index of selected record
-        idx = df[df['select_label'] == selected_label].index[0]
+        idx = df[df['select_label'] == selected_label].index
         row = df.loc[idx]
+        
+        # --- QUICK PORTAL LINK SECTION ---
+        st.info("💡 **Quick Appointment Tracking:** क्लिक करते ही अधिकारिक विज़ा शेड्यूलिंग वेबसाइट खुल जाएगी। नीचे दिए गए यूजरनेम और पासवर्ड का उपयोग करें।")
+        st.link_button("🔗 Open US Visa Scheduling Portal", VISA_PORTAL_URL, type="primary")
+        st.write("---")
         
         with st.form("edit_form"):
             e_col1, e_col2 = st.columns(2)
             with e_col1:
-                edit_name = st.text_input("Applicant Name*", value=str(row["Applicant Name"]))
-                edit_ds160 = st.text_input("DS-160 Number*", value=str(row["DS-160 Number"]))
-                edit_user = st.text_input("Portal Username", value=str(row["Portal Username"]) if pd.notna(row["Portal Username"]) else "")
+                edit_name = st.text_input("Applicant Name*", value=str(row["Applicant Name"].values[0]))
+                edit_ds160 = st.text_input("DS-160 Number*", value=str(row["DS-160 Number"].values[0]))
+                edit_user = st.text_input("Portal Username", value=str(row["Portal Username"].values[0]) if pd.notna(row["Portal Username"].values[0]) else "")
                 
                 # Parse existing creation date safely
                 try:
-                    init_app_date = datetime.strptime(str(row["Application Date"]), "%Y/%m/%d") if pd.notna(row["Application Date"]) and str(row["Application Date"]) != "" else datetime.today()
+                    init_app_date = datetime.strptime(str(row["Application Date"].values[0]), "%Y/%m/%d") if pd.notna(row["Application Date"].values[0]) and str(row["Application Date"].values[0]) != "" else datetime.today()
                 except ValueError:
                     init_app_date = datetime.today()
                 edit_app_date = st.date_input("Application Creation Date", init_app_date, key="edit_date")
                 
-                edit_handled = st.text_input("Handled By (Staff Name)*", value=str(row["Handled By"]))
+                edit_handled = st.text_input("Handled By (Staff Name)*", value=str(row["Handled By"].values[0]))
                 
             with e_col2:
-                edit_pass = st.text_input("Portal Password", value=str(row["Portal Password"]) if pd.notna(row["Portal Password"]) else "")
+                edit_pass = st.text_input("Portal Password", value=str(row["Portal Password"].values[0]) if pd.notna(row["Portal Password"].values[0]) else "")
                 
                 # Setup radio selection
-                current_status = str(row["Submission Status"])
+                current_status = str(row["Submission Status"].values[0])
                 status_options = [
                     "Not Submitted — pending review or submission", 
                     "Submitted — confirmation received"
@@ -148,13 +156,13 @@ with tab2:
                 
                 # Parse existing appointment date safely
                 try:
-                    init_slot = datetime.strptime(str(row["Appointment Date"]), "%Y/%m/%d").date() if pd.notna(row["Appointment Date"]) and str(row["Appointment Date"]) != "" and str(row["Appointment Date"]) != "None" else None
+                    init_slot = datetime.strptime(str(row["Appointment Date"].values[0]), "%Y/%m/%d").date() if pd.notna(row["Appointment Date"].values[0]) and str(row["Appointment Date"].values[0]) != "" and str(row["Appointment Date"].values[0]) != "None" else None
                 except ValueError:
                     init_slot = None
                 edit_slot = st.date_input("Visa Appointment Date", value=init_slot, key="edit_slot")
                 
                 # Setup branch selection
-                current_branch = str(row["Branch Location"])
+                current_branch = str(row["Branch Location"].values[0])
                 branch_options = ["Noida", "CP", "Gurgaon", "Other"]
                 branch_index = branch_options.index(current_branch) if current_branch in branch_options else 0
                 edit_branch = st.selectbox("Branch Location", branch_options, index=branch_index, key="edit_branch")
@@ -204,19 +212,3 @@ if search_query:
     mask = (
         display_df["Applicant Name"].str.lower().str.contains(search_query, na=False) |
         display_df["DS-160 Number"].str.lower().str.contains(search_query, na=False) |
-        display_df["Handled By"].str.lower().str.contains(search_query, na=False) |
-        display_df["Branch Location"].str.lower().str.contains(search_query, na=False)
-    )
-    display_df = display_df[mask]
-
-# ALWAYS SHOW THE COMPLETE DATA TABLE BELOW
-if not display_df.empty:
-    st.dataframe(display_df, use_container_width=True)
-    
-    # Export Option
-    try:
-        import io
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-            display_df.to_excel(writer, sheet_name='DS160_Master', index=False)
-        st.download_button(

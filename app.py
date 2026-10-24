@@ -10,7 +10,7 @@ st.set_page_config(page_title="US Visa DS-160 Professional Tracker", layout="wid
 DATA_FILE = "ds160_data.csv"
 
 # YOUR CORRECT OFFICIAL US VISA PORTAL URL
-VISA_PORTAL_URL = "https://www.usvisascheduling.com/"
+VISA_PORTAL_URL = "https://www.usvisascheduling.com"
 
 # Load or initialize data
 def load_data():
@@ -48,9 +48,9 @@ st.write("---")
 
 df = load_data()
 
-# Ensure fields are strings for formatting
+# Ensure fields are clean strings for smooth processing
 for col in df.columns:
-    df[col] = df[col].astype(str).replace("nan", "").replace("None", "")
+    df[col] = df[col].astype(str).replace("nan", "").replace("None", "").str.strip()
 
 # Counters Overview
 total_pax = len(df)
@@ -122,7 +122,6 @@ with tab2:
         idx = df[df['select_label'] == selected_label].index
         
         if len(idx) > 0:
-            # Safely fetch the values row-wise
             row_idx = idx[0]
             
             # --- QUICK PORTAL LINK SECTION ---
@@ -133,22 +132,22 @@ with tab2:
             with st.form("edit_form"):
                 e_col1, e_col2 = st.columns(2)
                 with e_col1:
-                    edit_name = st.text_input("Applicant Name*", value=df.loc[row_idx, "Applicant Name"])
-                    edit_ds160 = st.text_input("DS-160 Number*", value=df.loc[row_idx, "DS-160 Number"])
-                    edit_user = st.text_input("Portal Username", value=df.loc[row_idx, "Portal Username"])
+                    edit_name = st.text_input("Applicant Name*", value=str(df.loc[row_idx, "Applicant Name"]))
+                    edit_ds160 = st.text_input("DS-160 Number*", value=str(df.loc[row_idx, "DS-160 Number"]))
+                    edit_user = st.text_input("Portal Username", value=str(df.loc[row_idx, "Portal Username"]))
                     
                     try:
-                        init_app_date = datetime.strptime(df.loc[row_idx, "Application Date"], "%Y/%m/%d") if df.loc[row_idx, "Application Date"] != "" else datetime.today()
+                        init_app_date = datetime.strptime(str(df.loc[row_idx, "Application Date"]), "%Y/%m/%d") if df.loc[row_idx, "Application Date"] != "" else datetime.today()
                     except ValueError:
                         init_app_date = datetime.today()
                     edit_app_date = st.date_input("Application Creation Date", init_app_date, key="edit_date")
                     
-                    edit_handled = st.text_input("Handled By (Staff Name)*", value=df.loc[row_idx, "Handled By"])
+                    edit_handled = st.text_input("Handled By (Staff Name)*", value=str(df.loc[row_idx, "Handled By"]))
                     
                 with e_col2:
-                    edit_pass = st.text_input("Portal Password", value=df.loc[row_idx, "Portal Password"])
+                    edit_pass = st.text_input("Portal Password", value=str(df.loc[row_idx, "Portal Password"]))
                     
-                    current_status = df.loc[row_idx, "Submission Status"]
+                    current_status = str(df.loc[row_idx, "Submission Status"])
                     status_options = [
                         "Not Submitted — pending review or submission", 
                         "Submitted — confirmation received"
@@ -157,12 +156,12 @@ with tab2:
                     edit_status = st.radio("Submission Status", status_options, index=status_index, key="edit_status")
                     
                     try:
-                        init_slot = datetime.strptime(df.loc[row_idx, "Appointment Date"], "%Y/%m/%d").date() if df.loc[row_idx, "Appointment Date"] != "" else None
+                        init_slot = datetime.strptime(str(df.loc[row_idx, "Appointment Date"]), "%Y/%m/%d").date() if df.loc[row_idx, "Appointment Date"] != "" else None
                     except ValueError:
                         init_slot = None
                     edit_slot = st.date_input("Visa Appointment Date", value=init_slot, key="edit_slot")
                     
-                    current_branch = df.loc[row_idx, "Branch Location"]
+                    current_branch = str(df.loc[row_idx, "Branch Location"])
                     branch_options = ["Noida", "CP", "Gurgaon", "Other"]
                     branch_index = branch_options.index(current_branch) if current_branch in branch_options else 0
                     edit_branch = st.selectbox("Branch Location", branch_options, index=branch_index, key="edit_branch")
@@ -175,7 +174,7 @@ with tab2:
                         df.loc[row_idx, "DS-160 Number"] = edit_ds160
                         df.loc[row_idx, "Portal Username"] = edit_user
                         df.loc[row_idx, "Portal Password"] = edit_pass
-                        df.loc[idx, "Application Date"] = edit_app_date.strftime("%Y/%m/%d") if edit_app_date else ""
+                        df.loc[row_idx, "Application Date"] = edit_app_date.strftime("%Y/%m/%d") if edit_app_date else ""
                         df.loc[row_idx, "Submission Status"] = edit_status
                         df.loc[row_idx, "Appointment Date"] = edit_slot.strftime("%Y/%m/%d") if edit_slot else ""
                         df.loc[row_idx, "Handled By"] = edit_handled
@@ -217,4 +216,3 @@ if not display_df.empty:
     st.dataframe(display_df, use_container_width=True)
     
     try:
-        import io

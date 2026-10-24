@@ -10,7 +10,7 @@ st.set_page_config(page_title="US Visa DS-160 Professional Tracker", layout="wid
 DATA_FILE = "ds160_data.csv"
 
 # YOUR CORRECT OFFICIAL US VISA PORTAL URL
-VISA_PORTAL_URL = "https://usvisascheduling.com"
+VISA_PORTAL_URL = "https://www.usvisascheduling.com"
 
 # Load or initialize data
 def load_data():
